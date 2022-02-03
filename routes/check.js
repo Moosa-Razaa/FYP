@@ -51,7 +51,7 @@ const ReadValues = (Path, User, Path2) =>
         {
             let path = Path2 + "//" + Reports[i];
             PDFReader(path).then((result) => {
-                result["Lab Name"] = Reports[i];
+                result["File Name"] = Reports[i];
                 return_obj.push(result);
                 console.log(result);
             });
