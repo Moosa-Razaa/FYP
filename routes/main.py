@@ -11,7 +11,7 @@ def Function():
 
     def Dow():
         def directory(name):
-            _dir = "C:\\Users\\ICON\\Desktop\\fyp\\DownloadedReports"       
+            _dir = "F:\\Projects\\FYP\\Download"       
             _dir = os.path.join(_dir, 'User-%s' % name)
             if not os.path.exists(_dir):
                 os.makedirs(_dir)

@@ -4,7 +4,6 @@ const fs = require("fs");
 const auth = require("../Middlewares/auth");
 const spawn = require("child_process").spawn;
 const dotenv = require("dotenv");
-const pdfreader = require("../Middlewares/functions");
 const check = require("./check");
 
 const router = express.Router();
@@ -107,6 +106,7 @@ router.post("/reports", auth, (req, res) => {
   }
 });
 
+//*Completed
 router.post("/get/report", auth, (req, res) => {
   const user = req.body.user.username;
   const report_id = parseInt(req.body.id);
@@ -128,7 +128,7 @@ router.post("/get/report", auth, (req, res) => {
 function RunPythonFunction(lab_name, user, mrno, password) {
   let output;
   const pyProg = spawn("python", [
-    "C:\\Users\\ICON\\Desktop\\fyp\\Backend\\routes\\main.py",
+    "F:\\Projects\\FYP\\routes\\main.py",
     lab_name,
     user,
     mrno,
