@@ -4,9 +4,9 @@ const PdfParse = require("pdf-parse");
 const Regex = require("regex");
 let rimraf = require("rimraf");
 
-path = "C:\\Users\\ICON\\Desktop\\fyp\\DownloadedReports";
+path = "F:\\Projects\\FYP\\Download";
 user = "Moosa";
-path2 = "C:\\Users\\ICON\\Desktop\\fyp\\ReportsTemp";
+path2 = "F:\\Projects\\FYP\\Temp";
 
 const PathFound = (Path, User) =>
 {

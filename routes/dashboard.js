@@ -136,8 +136,8 @@ function RunPythonFunction(lab_name, user, mrno, password) {
   ]);
   return new Promise((resolve, reject) => {
     pyProg.stdout.on("data", function (data) {
-      output = data.toString();
-      if (output.length > 0) {
+      output = data.toString().trim();
+      if (output.length === 4) {
         resolve(output);
       } else {
         reject(output);
