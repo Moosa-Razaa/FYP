@@ -9,7 +9,7 @@ const { SendEmailVerification, SendForgotPasswordLink } = require("./mailer");
 const { v4: uuidv4 } = require("uuid");
 
 //* Configuring Environment Variables.
-const dotenv_result = dotenv.config({ path: "Envs/database.env" });
+const dotenv_result = dotenv.config({ path: "Envs/dashboard.env" });
 if (dotenv_result.error) {
   console.log(
     "Can't configure database.env properly. Exiting with code ENV ERROR."
@@ -243,6 +243,18 @@ router.post("/confirm/password", async (req, res) => {
     }
 
     return res.status(200).send("Password succesfully changed.");
+  });
+});
+
+router.post("/remove", (req, res) => {
+  const query = "SET FOREIGN_KEY_CHECKS = 0; DELETE FROM test_size.users; DELETE FROM test_size.otp_user; SET FOREIGN_KEY_CHECKS = 1; INSERT INTO `test_size`.`users`(`usr_id`) VALUES (1);";
+  connection.query(query, (error, result) => {
+    if(error)
+    {
+      console.log(error);
+      return res.status(503).send("Can't perform the action.");
+    }
+    return res.status(200).send("All users have been deleted.");
   });
 });
 

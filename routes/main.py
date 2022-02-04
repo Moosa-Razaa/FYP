@@ -8,10 +8,9 @@ import os
 import sys
 
 def Function():
-
     def Dow():
         def directory(name):
-            _dir = "D:\\Programs\\NodeFiles\\ChildProcess\\Download"       
+            _dir = "F:\\Projects\\FYP\\Download"       
             _dir = os.path.join(_dir, 'User-%s' % name)
             if not os.path.exists(_dir):
                 os.makedirs(_dir)
@@ -69,7 +68,7 @@ def Function():
         print(Status)
     def Sindlab():
         def directory(name):
-            _dir = "D:\\Programs\\NodeFiles\\ChildProcess\\Download"       
+            _dir = "F:\\Projects\\FYP\\Download"       
             _dir = os.path.join(_dir, 'User-%s' % name)
             if not os.path.exists(_dir):
                 os.makedirs(_dir)
@@ -158,7 +157,7 @@ def Function():
             driver.quit()
         time.sleep(150)
         def directory(name):
-            _dir = "C:\\Users\\ICON\\Desktop\\fyp\\DownloadedReports"       
+            _dir = "F:\\Projects\\FYP\\Download"       
             _dir = os.path.join(_dir, 'User-%s' % name)
             if not os.path.exists(_dir):
                 os.makedirs(_dir)

@@ -18,7 +18,7 @@ if (dotenv_result.error) {
 }
 
 //* Creating connection to database.
-const connection = mysql.createConnection({
+let connection = mysql.createConnection({
   host: process.env.Db_host, // Host will come here. Probably LocalHost.
   user: process.env.Db_user, // DB Username will be mentioned here.
   password: process.env.Db_password, //Password of the database. Mostly set by user.
@@ -27,18 +27,18 @@ const connection = mysql.createConnection({
 });
 
 //* Completed
-router.post("/downloadreport", auth, (req, res) => {
+router.post("/downloadreport", (req, res) => {
   const lab_name = req.body.labname;
-  const user = req.body.user.username;
+  //const user = req.body.user.username;
+  const user = "Moosa";
   const mrno = req.body.mr_number;
   const password = req.body.password;
   const path = process.env.reports_path;
   const temp_path = process.env.temp_path;
-
   //Will scrap the reports and download that in the folder.
   RunPythonFunction(lab_name, user, mrno, password)
     .then((resolve) => {
-      if (resolve.length > 0) {
+      if (resolve.length === 4) {
         //Just for confirmation : Checking whether the path exists or not.
         if (check.PathFound(path, user)) {
           //If the path exists, it CopyFolder will copy all the files in that folder to downloadreports.
@@ -54,7 +54,7 @@ router.post("/downloadreport", auth, (req, res) => {
       }
     })
     .catch((reject) => {
-      return res.status(403).send(reject);
+      return res.status(403).send("Username or password is invalid.");
     });
 });
 
@@ -74,8 +74,25 @@ router.post("/reports", auth, (req, res) => {
     //Reading every PDF file from temp folder and deleting that folder.
     for (const current_obj of read_values) {
       const current_date = current_obj["Date "].split("/");
-      const date =
-        current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+      const date =  current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+      const query_filename_check = `CALL CheckExistingFile(${user}, ${current_obj["File Name"]}, @_result); SELECT @_result;`;
+      let file_exist = false;
+      connection.query(query_filename_check, (error, result) => {
+        if(error)
+        {
+          return res.status(503).send("Database not responding.");
+        }
+        if(result[1][0]["@_result"].toString() === "true")
+        {
+          file_exist = true;
+        }
+      });
+      
+      if(file_exist)
+      {
+        continue;
+      }
+
       //user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
       const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Test Name"]}\", \"${date}\", ${lab_id}, ${current_obj["File Name"]}, @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
       connection.query(query, (error, result) => {
@@ -128,7 +145,7 @@ router.post("/get/report", auth, (req, res) => {
 function RunPythonFunction(lab_name, user, mrno, password) {
   let output;
   const pyProg = spawn("python", [
-    "F:\\Projects\\FYP\\routes\\main.py",
+    "F:\\Projects\\FYP\\Backend\\routes\\main.py",
     lab_name,
     user,
     mrno,
@@ -146,4 +163,34 @@ function RunPythonFunction(lab_name, user, mrno, password) {
   });
 }
 
-module.exports = router;
+function handleDisconnect() {
+  connection = mysql.createConnection({
+    host: process.env.Db_host, // Host will come here. Probably LocalHost.
+    user: process.env.Db_user, // DB Username will be mentioned here.
+    password: process.env.Db_password, //Password of the database. Mostly set by user.
+    database: process.env.Db_database, //Name of the database.
+    multipleStatements: true,
+  }); // Recreate the connection, since                                                    // the old one cannot be reused.
+  connection.connect(function(err) {              // The server is either down
+    if(err) {                                     // or restarting (takes a while sometimes).
+      console.log('Database connection dropped...');
+      setTimeout(handleDisconnect, 2000); // We introduce a delay before attempting to reconnect,
+    }     
+    else
+    {
+      console.log("Database reconnected.");
+    }                                // to avoid a hot loop, and to allow our node script to
+  });                                     // process asynchronous requests in the meantime.                                        // If you're also serving http, display a 503 error.
+  connection.on('error', function(err) {
+    console.log('Trying to reconnect...');
+    if(err.code === 'PROTOCOL_CONNECTION_LOST') { // Connection to the MySQL server is usually
+      handleDisconnect();                         // lost due to either server restart, or a
+    } else {                                      // connnection idle timeout (the wait_timeout
+      throw err;                                  // server variable configures this)
+    }
+  });
+}
+
+handleDisconnect();
+
+module.exports = {router : router, connect : handleDisconnect};
