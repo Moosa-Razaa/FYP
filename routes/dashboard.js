@@ -67,7 +67,8 @@ router.post("/reports", auth, (req, res) => {
 
   if (check.PathFound(path, user)) {
     const read_values = check.ReadValues(path, user, temp_path);
-    if (!read_values) {
+    console.log(read_values);
+    if (read_values === "false") {
       return res.status(503).send("Can't read reports.");
     }
 

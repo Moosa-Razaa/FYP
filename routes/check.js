@@ -10,6 +10,7 @@ path2 = "F:\\Projects\\FYP\\Temp";
 
 const PathFound = (Path, User) =>
 {
+    console.log(Path + "\\User-" + User);
     if (fs.existsSync(Path + "\\User-" + User))
     {
         return true;
@@ -38,22 +39,22 @@ const CopyFolder = (Path, User, Path2) =>
 
 const ReadValues = (Path, User, Path2) =>
 {
-    console.log(Path, User, Path2);
-    if(fs.existsSync(Path2 + "\\User-" + User + "\\AgaKhanLab-" + User))
+    //console.log(Path, User, Path2);
+    if(fs.existsSync(Path2 + "\\User-" + User + "\\AgakhanLab-" + User))
     {
         return_obj = [];
         Path = Path + "\\User-" + User + "\\AgaKhanLab-" + User;
         Path2 = Path2 + "\\User-" + User + "\\AgaKhanLab-" + User;
         console.log("Path resolved: " + Path2);
         let Reports = fs.readdirSync(Path2);
-        console.log(Reports);
+        //console.log(Reports);
         for(let i = 0; i < Reports.length; i++)
         {
             let path = Path2 + "//" + Reports[i];
             PDFReader(path).then((result) => {
                 result["File Name"] = Reports[i];
                 return_obj.push(result);
-                console.log(result);
+                //console.log(result);
             });
 
             //Reading values from the PDF file and sending it to the server.
@@ -79,7 +80,7 @@ const ReadValues = (Path, User, Path2) =>
     else if(! fs.existsSync(Path2 + "\\User-" + User + "\\DowLab-" + User))
     {
         console.log("Cannot resolve path: " + Path2);
-        return false;
+        return "false";
     } 
 
 }
@@ -95,7 +96,6 @@ const DeleteFolder = (Path, User) =>
     
 }
 
-// PathFound(path, user)
 // CopyFolder(path, user, path2)
 // ReadValues(path, user, path2)
 // DeleteFolder(path2, user)

@@ -155,54 +155,57 @@ def Function():
         except:
             Status = "False"
             driver.quit()
-        time.sleep(150)
-        def directory(name):
-            _dir = "F:\\Projects\\FYP\\Download"       
-            _dir = os.path.join(_dir, 'User-%s' % name)
-            if not os.path.exists(_dir):
-                os.makedirs(_dir)
-                _dir = os.path.join(_dir, 'AgaKhanLab-%s' % name)
+        if(Status == "True"):
+            time.sleep(150)
+            def directory(name):
+                _dir = "F:\\Projects\\FYP\\Download"       
+                _dir = os.path.join(_dir, 'User-%s' % name)
                 if not os.path.exists(_dir):
                     os.makedirs(_dir)
-            elif os.path.exists(_dir):
-                _dir = os.path.join(_dir, 'AgaKhanLab-%s' % name)
-                if not os.path.exists(_dir):
-                    os.makedirs(_dir)
-            return _dir
+                    _dir = os.path.join(_dir, 'AgaKhanLab-%s' % name)
+                    if not os.path.exists(_dir):
+                        os.makedirs(_dir)
+                elif os.path.exists(_dir):
+                    _dir = os.path.join(_dir, 'AgaKhanLab-%s' % name)
+                    if not os.path.exists(_dir):
+                        os.makedirs(_dir)
+                return _dir
 
-        User = str(sys.argv[2])
-        Uname = "fvufuvsv"
-        download_dir = directory(User)
-        option = webdriver.ChromeOptions()
-        option.add_argument("--start-maximized")
-        profile = {"profile.default_content_settings.popups": 0, "download.default_directory": download_dir, "directory_upgrade": True}
-                
-        option.add_experimental_option("prefs", profile)
-        Path = "C:\Program Files (x86)\chromedriver.exe"
-        driver = webdriver.Chrome(Path, chrome_options=option)
-        driver.get("https://www.guerrillamail.com/inbox")
-        driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']").click()
-        username = driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']/input[@type='text']")
-        username.send_keys(Uname)
-        driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']/button[@class='save button small']").click()
-        time.sleep(5)
-        driver.find_element(By.XPATH, "//tr[starts-with(@id, 'mr_')]").click()
-        time.sleep(5)
-        links = []
-        name = []
-        element = driver.find_elements(By.XPATH, "//a[contains(@href, '?get_att&email')]")
-        for i in element:
-            links.append(i.get_attribute('href'))
-            name.append(i.text)
-        f = -1
-        for j in range(len(name)):
-            path = download_dir + "\\" + name[j]
-            f = f + 1
-            if not os.path.isfile(path):
-                driver.get(links[f])
-        time.sleep(5)
-        driver.quit()
-        return Status
+            User = str(sys.argv[2])
+            Uname = "fvufuvsv"
+            download_dir = directory(User)
+            option = webdriver.ChromeOptions()
+            option.add_argument("--start-maximized")
+            profile = {"profile.default_content_settings.popups": 0, "download.default_directory": download_dir, "directory_upgrade": True}
+                    
+            option.add_experimental_option("prefs", profile)
+            Path = "C:\Program Files (x86)\chromedriver.exe"
+            driver = webdriver.Chrome(Path, chrome_options=option)
+            driver.get("https://www.guerrillamail.com/inbox")
+            driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']").click()
+            username = driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']/input[@type='text']")
+            username.send_keys(Uname)
+            driver.find_element(By.XPATH, "//div[@class='col2']/span[@dir='ltr']/span[@title='Click to Edit']/button[@class='save button small']").click()
+            time.sleep(5)
+            driver.find_element(By.XPATH, "//tr[starts-with(@id, 'mr_')]").click()
+            time.sleep(5)
+            links = []
+            name = []
+            element = driver.find_elements(By.XPATH, "//a[contains(@href, '?get_att&email')]")
+            for i in element:
+                links.append(i.get_attribute('href'))
+                name.append(i.text)
+            f = -1
+            for j in range(len(name)):
+                path = download_dir + "\\" + name[j]
+                f = f + 1
+                if not os.path.isfile(path):
+                    driver.get(links[f])
+            time.sleep(5)
+            driver.quit()
+            print(Status)
+        else:
+            print(Status)
 
     if str(sys.argv[1]) == "dow":
         Dow()
