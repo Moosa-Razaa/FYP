@@ -2,7 +2,7 @@ const fs = require('fs');
 const fs2 = require('fs-extra');
 const PdfParse = require("pdf-parse");
 const Regex = require("regex");
-let rimraf = require("rimraf");
+const rimraf = require("rimraf");
 
 path = "F:\\Projects\\FYP\\Download";
 user = "Moosa";
