@@ -2,11 +2,6 @@ const fs = require("fs");
 const PdfParse = require("pdf-parse");
 const Regex = require("regex");
 
-const path = "C:\\Users\\ICON\\Desktop\\fyp\\slnm\\node\\patient\\aga.pdf";
-PDFReader(path).then((result) => {
-    console.log(result);
-});
-
 async function PDFReader(path)
 {
     object_to_return = {};

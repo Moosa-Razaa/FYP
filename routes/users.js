@@ -18,7 +18,7 @@ if (dotenv_result.error) {
 }
 
 //* Creating connection to database.
-const connection = mysql.createConnection({
+let connection = mysql.createConnection({
   host: process.env.Db_host, // Host will come here. Probably LocalHost.
   user: process.env.Db_user, // DB Username will be mentioned here.
   password: process.env.Db_password, //Password of the database. Mostly set by user.
@@ -257,5 +257,37 @@ router.post("/remove", (req, res) => {
     return res.status(200).send("All users have been deleted.");
   });
 });
+
+function handleDisconnect() {
+	connection = mysql.createConnection({
+		host: process.env.Db_host, // Host will come here. Probably LocalHost.
+		user: process.env.Db_user, // DB Username will be mentioned here.
+		password: process.env.Db_password, //Password of the database. Mostly set by user.
+		database: process.env.Db_database, //Name of the database.
+		multipleStatements: true,
+	}); // Recreate the connection, since                                                    // the old one cannot be reused.
+	connection.connect(function (err) {
+		// The server is either down
+		if (err) {
+			// or restarting (takes a while sometimes).
+			console.log("Database connection dropped...");
+			setTimeout(handleDisconnect, 2000); // We introduce a delay before attempting to reconnect,
+		} else {
+			console.log("Database reconnected.");
+		} // to avoid a hot loop, and to allow our node script to
+	}); // process asynchronous requests in the meantime.                                        // If you're also serving http, display a 503 error.
+	connection.on("error", function (err) {
+		console.log("Trying to reconnect...");
+		if (err.code === "PROTOCOL_CONNECTION_LOST") {
+			// Connection to the MySQL server is usually
+			handleDisconnect(); // lost due to either server restart, or a
+		} else {
+			// connnection idle timeout (the wait_timeout
+			throw err; // server variable configures this)
+		}
+	});
+}
+
+handleDisconnect();
 
 module.exports = router;
