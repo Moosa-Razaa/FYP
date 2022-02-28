@@ -57,7 +57,7 @@ const ReadValues = async (Path, User, Path2, Labname) => {
 		Path2 = Path2 + "\\User-" + User + "\\SindLab-" + User;
 		let Reports = fs.readdirSync(Path2);
 		for (const current_report of Reports) {
-            let ppath = "F:\\Projects\\FYP\\Temp\\User-moosa\\SindLab-moosa\\" + current_report;
+            let ppath = "F:\\Projects\\FYP\\Temp\\User-" + User + "\\SindLab-" + User + "\\" + current_report;
             //let path = Path2 + "\\" + Reports[i];
 			await PDFReader(ppath).then((result) => {
 				result["File Name"] = current_report;
@@ -97,24 +97,76 @@ const DeleteFolder = (Path, User) => {
 };
 
 async function PDFReader(path) {
-	object_to_return = {};
-	//First, Reading the content of the file.
+	// object_to_return = {};
+	// //First, Reading the content of the file.
+	// await PdfParse(path).then((file_content) => {
+	// 	const content = file_content.text.split("\n");
+	// 	// content.splice(0, 4);
+	// 	object_to_return["MR Number"] = content[2].split(":")[1].trim();
+	// 	object_to_return["Patient Name"] = content[4].split(":")[1].trim();
+	// 	if(object_to_return["Test Name"] = content[10].split('|')[1] === undefined)
+    //     {
+    //         object_to_return["Test Name"] = content[11].split('|')[1];    
+    //     }
+    //     else
+    //     {
+    //         object_to_return["Test Name"] = content[10].split('|')[1];
+    //     }
+	// 	object_to_return["Requesting Physician"] = content[6].split(":")[1];
+	// 	object_to_return["Lab No"] = content[8].split(":")[1];
+	// 	if(object_to_return["Date "] = content[13] === 'Result')
+	// 	{
+	// 		object_to_return["Date "] = content[14]
+	// 	}
+	// 	else
+	// 	{
+	// 		object_to_return["Date "] = content[13];
+	// 	}
+		
+	//});
+	let object_to_return = {};
 	await PdfParse(path).then((file_content) => {
 		const content = file_content.text.split("\n");
-		// content.splice(0, 4);
-		object_to_return["MR Number"] = content[2].split(":")[1].trim();
-		object_to_return["Patient Name"] = content[4].split(":")[1].trim();
-		if(object_to_return["Test Name"] = content[10].split('|')[1] === undefined)
-        {
-            object_to_return["Test Name"] = content[11].split('|')[1];    
-        }
-        else
-        {
-            object_to_return["Test Name"] = content[10].split('|')[1];
-        }
-		object_to_return["Requesting Physician"] = content[6].split(":")[1];
-		object_to_return["Lab No"] = content[8].split(":")[1];
-		object_to_return["Date "] = content[13];
+		content.splice(0, 2);
+		if (content.length > 8 && content[8].includes("Page")) {
+			content.splice(8, 1);
+		}
+		//12
+		object_to_return["MR Number"] = content[0].split(":")[1];
+		object_to_return["Patient Name"] = content[2].split(":")[1];
+		object_to_return["Gender "] = content[3].split("|")[2].trim();
+		object_to_return["Age "] = content[3]
+			.split("|")[1]
+			.split(":")[1]
+			.trim();
+		object_to_return["Ref. Consultant"] = content[4].split(":")[1];
+		object_to_return["Date "] = content[7].split(":")[1];
+		object_to_return["Test Name"] = content[8];
+		if (
+			object_to_return["Test Name"].includes("HbA1c [HPLC]") === false &&
+			object_to_return["Test Name"].includes("LDL Cholesterol") === false &&
+			object_to_return["Test Name"].includes("Plasma Glucose") ===  false
+		) {
+			let attributes = [];
+			for (let i = 13; i < content.length - 3; i++) {
+				let currentObj = {};
+				currentObj["Attribute"] = content[i];
+				currentObj["Value"] = content[++i];
+				//const unit = content[++i].match(/^[^0-9.<]+/);
+				const range = content[++i].match(/[0-9. <-]*$/);
+				currentObj["Unit"] = content[i].substring(
+					0,
+					content[i].length - range[0].length
+				);
+				if (range === "-") {
+					range = "null";
+				} else {
+					currentObj["Range"] = range[0];
+				}
+				attributes.push(currentObj);
+			}
+			object_to_return["Attributes"] = attributes;
+		}
 	});
 	return object_to_return;
 }

@@ -116,7 +116,7 @@ def Function():
                 f = f + 1
                 if not os.path.isfile(path):
                     element[f].click()
-            time.sleep(30)
+            time.sleep(10)
             driver.quit()
         except:
             Status = "False"

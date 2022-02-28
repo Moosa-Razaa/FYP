@@ -42,9 +42,11 @@ router.post("/create", async (req, res) => {
     }
     const result_query = result[1][0]["@result"].toString();
     if (result_query === "True Email") {
+      console.log("I am here.");
       return res.status(401).send("Email already exist.");
     }
     if (result_query === "True Username") {
+      console.log("I am here in true username");
       return res.status(401).send("Username already exist.");
     }
     //? Now we know that username and email both do not exist in the database.
@@ -70,12 +72,14 @@ router.post("/create", async (req, res) => {
         const otp_query = `CALL add_otp(\"${output1}\", @_otpcode); SELECT @_otpcode;`;
         connection.query(otp_query, (error, result) => {
           if (error) {
+            console.log(error);
             return res.status(401).send("Can't send email verification code.");
           }
           const otp_code = result[1][0]["@_otpcode"].toString();
           const response = SendEmailVerification(email, otp_code);
 
           if (response === "False") {
+            console.log("Can't verify email.");
             return res.status(401).send("Can't send email verification code.");
           }
           res
@@ -116,7 +120,7 @@ router.post("/verify", (req, res) => {
 router.post("/login", (req, res) => {
   const email = req.body.loginUser;
   const password = req.body.loginPassword;
-  const identify = "Username";
+  let identify = "Username";
 
   if (email.includes("@")) {
     console.log("Username override.");

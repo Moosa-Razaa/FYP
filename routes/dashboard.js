@@ -79,14 +79,24 @@ router.post("/reports", auth, async (req, res) => {
 		}
 		//Reading every PDF file from temp folder and deleting that folder.
 		for (const current_obj of read_values) {
+			const current_date = current_obj["Date "].split(",");
+			const current_month = current_date[0].split(" ");
 			//const current_date = current_obj["Date "].split("/");
-			const date = "2001-05-10"; //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+			const date =
+				current_date[1].trim() +
+				"-" +
+				current_month[0].trim() +
+				"-" +
+				current_date[1].trim(); //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
 			const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
 			connection.query(query_filename_check, (error, result) => {
 				if (error) {
 					return res.status(503).send("Database not responding.");
-				} else if (result[1][0]["@_result"].toString().trim().length === 5) {
+				} else if (
+					result[1][0]["@_result"].toString().trim().length === 5
+				) {
 					//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
+					console.log("I am still running......");
 					const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 2, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
 					connection.query(query, (error, result) => {
 						if (error) {
@@ -96,11 +106,35 @@ router.post("/reports", auth, async (req, res) => {
 								.send("Database server down.");
 						}
 						const report_id = result[1][0]["@_report_id"];
+						const download_id = result[1][0]["@_download_id"];
+						if(current_obj.hasOwnProperty("Attributes"))
+						{
+							for(const obj of current_obj["Attributes"])
+							{
+								//report_id, download_id, aatribute_name, attr_value, range, status
+								const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, ${obj["Attribute"]}, ${obj["Value"].trim() + obj["Unit"]}, ${obj["Range"]}, @_status; SELECT @_status;)`;
+								connection.query(add_attribute, (error, result) => {
+									if(error)
+									{
+										console.log("Can't save attributes in the database.");
+										return res.status(503).send("Database server down.");
+									}
+									const attr_result = result[1][0]["@_status"]
+									if(attr_result !== "success")
+									{
+										console.log("Attribute not added correctly.");
+										return res.status("503").send("Database can't save attributes.");
+									}
+								});
+							}
+						}
 					});
 				}
 			});
-		};
+		}
+	};
 
+	setTimeout(() => {
 		const all_reports_query = `SELECT * FROM test_size.allreport WHERE usr_id = ${user_id};`;
 		return_obj = [];
 		connection.query(all_reports_query, (error2, rows) => {
@@ -119,17 +153,40 @@ router.post("/reports", auth, async (req, res) => {
 				obj_related["mr_number"] = current["mr_num"];
 				return_obj.push(obj_related);
 			}
+			console.log(return_obj);
 			console.log("Response send successfully.");
 			return res.status(200).send(return_obj);
 		});
-	}
+	}, 10000);
+	
+	// const all_reports_query = `SELECT * FROM test_size.allreport WHERE usr_id = ${user_id};`;
+	// console.log("Hhehehe! I run before.");
+	// return_obj = [];
+	// connection.query(all_reports_query, (error2, rows) => {
+	// 	if (error2) {
+	// 		return res.status(503).send("Can't retrieve data from database.");
+	// 	}
+	// 	for (const current of rows) {
+	// 		obj_related = {};
+	// 		obj_related["report_download_id"] = current["rpt_down_id"];
+	// 		obj_related["lab_name"] = current["lab_nm"];
+	// 		obj_related["report_name"] = current["rpt_nm"];
+	// 		obj_related["patient_name"] = current["patientname"];
+	// 		obj_related["sample_date"] = current["Sample_date"];
+	// 		obj_related["mr_number"] = current["mr_num"];
+	// 		return_obj.push(obj_related);
+	// 	}
+	// 	console.log(return_obj);
+	// 	console.log("Response send successfully.");
+	// 	return res.status(200).send(return_obj);
+	// });
 });
 
 //*Completed
 router.post("/get/report", auth, (req, res) => {
 	const user = req.body.user.username;
 	const report_id = req.body.download_report_id;
-  const lab_name = req.body.lab_name.substring(0, 4) + "Lab";
+	const lab_name = req.body.lab_name.substring(0, 4) + "Lab";
 
 	const query = `CALL get_rpt(${report_id}, @_file_name); SELECT @_file_name;`; //Query to return the report with that username.
 	connection.query(query, (error, result) => {
@@ -195,6 +252,46 @@ function handleDisconnect() {
 			// connnection idle timeout (the wait_timeout
 			throw err; // server variable configures this)
 		}
+	});
+}
+
+function ReadValues(read_values, user_id) {
+	let counter = 0;
+	return new Promise((resolve, reject) => {
+		for (const current_obj of read_values) {
+			const current_date = current_obj["Date "].split(",");
+			const current_month = current_date[0].split(" ");
+			const date =
+				current_date[1].trim() +
+				"-" +
+				current_month[0].trim() +
+				"-" +
+				current_date[1].trim();
+			console.log(date);
+			const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
+			connection.query(query_filename_check, (error, result) => {
+				if (error) {
+					reject(false);
+				} else if (
+					result[1][0]["@_result"].toString().trim().length === 5
+				) {
+					//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
+					const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 2, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
+					connection.query(query, (error) => {
+						if (error) {
+							console.log(error);
+							reject(false);
+						}
+						counter++;
+						if(counter === read_values.length)
+						{
+							resolve(true);
+						}
+					});
+				}
+			});
+		}
+		resolve(true);
 	});
 }
 
