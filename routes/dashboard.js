@@ -5,6 +5,7 @@ const auth = require("../Middlewares/auth");
 const spawn = require("child_process").spawn;
 const dotenv = require("dotenv");
 const check = require("./check");
+const { isError } = require("lodash");
 
 const router = express.Router();
 
@@ -65,100 +66,219 @@ router.post("/reports", auth, async (req, res) => {
 	const user_id = req.body.user.id;
 	const path = process.env.reports_path;
 	const temp_path = process.env.temp_path;
+	let is_error = false;
+
+	const checkPathFound = check.PathFoundForLabs(path, user);
+	if (!checkPathFound) {
+		return res.status(404).send("Folder not found.");
+	}
 
 	if (check.PathFound(path, user)) {
-		let read_values = await check.ReadValues(
-			path,
-			user,
-			temp_path,
-			"sindlab"
-		);
-		if (read_values === "false") {
-			console.log("I am here.");
-			return res.status(503).send("Can't read reports.");
-		}
-		//Reading every PDF file from temp folder and deleting that folder.
-		for (const current_obj of read_values) {
-			const current_date = current_obj["Date "].split(",");
-			const current_month = current_date[0].split(" ");
-			//const current_date = current_obj["Date "].split("/");
-			const date =
-				current_date[1].trim() +
-				"-" +
-				current_month[0].trim() +
-				"-" +
-				current_date[1].trim(); //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
-			const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
-			connection.query(query_filename_check, (error, result) => {
-				if (error) {
-					return res.status(503).send("Database not responding.");
-				} else if (
-					result[1][0]["@_result"].toString().trim().length === 5
-				) {
-					//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
-					console.log("I am still running......");
-					const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 2, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
-					connection.query(query, (error, result) => {
-						if (error) {
-							console.log(error);
-							return res
-								.status(503)
-								.send("Database server down.");
-						}
-						const report_id = result[1][0]["@_report_id"];
-						const download_id = result[1][0]["@_download_id"];
-						if(current_obj.hasOwnProperty("Attributes"))
-						{
-							for(const obj of current_obj["Attributes"])
-							{
-								//report_id, download_id, aatribute_name, attr_value, range, status
-								const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, ${obj["Attribute"]}, ${obj["Value"].trim() + obj["Unit"]}, ${obj["Range"]}, @_status; SELECT @_status;)`;
-								connection.query(add_attribute, (error, result) => {
-									if(error)
-									{
-										console.log("Can't save attributes in the database.");
-										return res.status(503).send("Database server down.");
-									}
-									const attr_result = result[1][0]["@_status"]
-									if(attr_result !== "success")
-									{
-										console.log("Attribute not added correctly.");
-										return res.status("503").send("Database can't save attributes.");
-									}
-								});
+		if (checkPathFound["sind"]) {
+			//! Reading values from SindLab
+			let read_values = await check.ReadValues(
+				path,
+				user,
+				temp_path,
+				"sindlab"
+			);
+			if (read_values === "false") {
+				return res.status(503).send("Can't read reports.");
+			}
+			//Reading every PDF file from temp folder and deleting that folder.
+			for (const current_obj of read_values) {
+				const current_date = current_obj["Date "].split(",");
+				const current_month = current_date[0].split(" ");
+				//const current_date = current_obj["Date "].split("/");
+				const date =
+					current_date[1].trim() +
+					"-" +
+					current_month[0].trim() +
+					"-" +
+					current_date[1].trim(); //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+				const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
+				connection.query(query_filename_check, (error, result) => {
+					if (error) {
+						return res.status(503).send("Database not responding.");
+					} else if (
+						result[1][0]["@_result"].toString().trim().length === 5
+					) {
+						//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
+						console.log("I am still running......");
+						const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 2, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
+						connection.query(query, (error, result) => {
+							if (error) {
+								is_error = true;
+								console.log(error);
+								return res
+									.status(503)
+									.send("Database server down.");
 							}
-						}
-					});
-				}
-			});
+							const report_id = result[1][0]["@_report_id"];
+							const download_id = result[1][0]["@_download_id"];
+							if (current_obj.hasOwnProperty("Attributes")) {
+								for (const obj of current_obj["Attributes"]) {
+									//report_id, download_id, aatribute_name, attr_value, range, status
+									const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${
+										obj["Attribute"]
+									}", "${
+										obj["Value"].trim() + obj["Unit"]
+									}", "${
+										obj["Range"]
+									}", @_status); SELECT @_status;`;
+									console.log(add_attribute);
+
+									console.log(add_attribute);
+									connection.query(
+										add_attribute,
+										(error, result) => {
+											if (error) {
+												console.log(error);
+												is_error = true;
+												return res
+													.status(503)
+													.send(
+														"Attributes : Database server down."
+													);
+											} else {
+												const attr_result =
+													result[1][0]["@_status"];
+												if (attr_result !== "success") {
+													console.log(
+														"Attribute not added correctly."
+													);
+													is_error = true;
+													return res
+														.status("503")
+														.send(
+															"Database can't save attributes."
+														);
+												}
+											}
+										}
+									);
+								}
+							}
+						});
+					}
+				});
+			}
 		}
-	};
+
+		//! Reading values from DowLab
+		if (checkPathFound["dow"]) {
+			let dowReadValues = await check.ReadValues(
+				path,
+				user,
+				temp_path,
+				"dow"
+			);
+			if (dowReadValues === "false") {
+				return res.status(503).send("Can't read reports.");
+			}
+			for (const current_obj of dowReadValues) {
+				//const current_date = current_obj["Date "].split(",");
+				//const current_month = current_date[0].split(" ");
+				//const current_date = current_obj["Date "].split("/");
+				const date = current_obj["Date "]; //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+				const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
+				connection.query(query_filename_check, (error, result) => {
+					if (error) {
+						return res.status(503).send("Database not responding.");
+					} else if (
+						result[1][0]["@_result"].toString().trim().length === 5
+					) {
+						//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
+						console.log("I am still running......");
+						const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 1, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
+						connection.query(query, (error, result) => {
+							if (error) {
+								is_error = true;
+								console.log(error);
+								return res
+									.status(503)
+									.send("Database server down.");
+							}
+							const report_id = result[1][0]["@_report_id"];
+							const download_id = result[1][0]["@_download_id"];
+							if (current_obj.hasOwnProperty("Attributes")) {
+								for (const obj of current_obj["Attributes"]) {
+									//report_id, download_id, aatribute_name, attr_value, range, status
+									const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${
+										obj["Attribute"]
+									}", "${
+										obj["Value"].trim() + obj["Unit"]
+									}", "${
+										obj["Range"]
+									}", @_status); SELECT @_status;`;
+									console.log(add_attribute);
+
+									console.log(add_attribute);
+									connection.query(
+										add_attribute,
+										(error, result) => {
+											if (error) {
+												console.log(error);
+												is_error = true;
+												return res
+													.status(503)
+													.send(
+														"Attributes : Database server down."
+													);
+											} else {
+												const attr_result =
+													result[1][0]["@_status"];
+												if (attr_result !== "success") {
+													console.log(
+														"Attribute not added correctly."
+													);
+													is_error = true;
+													return res
+														.status("503")
+														.send(
+															"Database can't save attributes."
+														);
+												}
+											}
+										}
+									);
+								}
+							}
+						});
+					}
+				});
+			}
+		}
+	}
 
 	setTimeout(() => {
-		const all_reports_query = `SELECT * FROM test_size.allreport WHERE usr_id = ${user_id};`;
-		return_obj = [];
-		connection.query(all_reports_query, (error2, rows) => {
-			if (error2) {
-				return res
-					.status(503)
-					.send("Can't retrieve data from database.");
-			}
-			for (const current of rows) {
-				obj_related = {};
-				obj_related["report_download_id"] = current["rpt_down_id"];
-				obj_related["lab_name"] = current["lab_nm"];
-				obj_related["report_name"] = current["rpt_nm"];
-				obj_related["patient_name"] = current["patientname"];
-				obj_related["sample_date"] = current["Sample_date"];
-				obj_related["mr_number"] = current["mr_num"];
-				return_obj.push(obj_related);
-			}
-			console.log(return_obj);
-			console.log("Response send successfully.");
-			return res.status(200).send(return_obj);
-		});
-	}, 10000);
-	
+		if (!is_error) {
+			const all_reports_query = `SELECT * FROM test_size.allreport WHERE usr_id = ${user_id};`;
+			return_obj = [];
+			connection.query(all_reports_query, (error2, rows) => {
+				if (error2) {
+					return res
+						.status(503)
+						.send("Can't retrieve data from database.");
+				}
+				for (const current of rows) {
+					obj_related = {};
+					obj_related["patient_id"] = current["patientid"];
+					obj_related["report_download_id"] = current["rpt_down_id"];
+					obj_related["lab_name"] = current["lab_nm"];
+					obj_related["report_name"] = current["rpt_nm"];
+					obj_related["patient_name"] = current["patientname"];
+					obj_related["sample_date"] = current["Sample_date"];
+					obj_related["mr_number"] = current["mr_num"];
+					return_obj.push(obj_related);
+				}
+				console.log(return_obj);
+				console.log("Response send successfully.");
+				return res.status(200).send(return_obj);
+			});
+		}
+	}, 30000);
+
 	// const all_reports_query = `SELECT * FROM test_size.allreport WHERE usr_id = ${user_id};`;
 	// console.log("Hhehehe! I run before.");
 	// return_obj = [];
@@ -200,6 +320,22 @@ router.post("/get/report", auth, (req, res) => {
 			result[1][0]["@_file_name"].toString();
 		const file_data = fs.readFileSync(file_path);
 		return res.status(200).send(file_data);
+	});
+});
+
+router.post("/get/report/view", auth, (req, res) => {
+	const reportId = req.body.download_report_id;
+	const query = `SELECT * FROM reportdetail WHERE rpt_down_id = ${reportId};`;
+
+	connection.query(query, (error, rows, fields) => {
+		if(error)
+		{
+			return res.status(503).send("Can't get report details from database.");
+		}
+		console.log(rows);
+		console.log("--------------------");
+		console.log(fields);
+		return res.status(200).send("Wait for testing...");
 	});
 });
 
@@ -283,8 +419,7 @@ function ReadValues(read_values, user_id) {
 							reject(false);
 						}
 						counter++;
-						if(counter === read_values.length)
-						{
+						if (counter === read_values.length) {
 							resolve(true);
 						}
 					});
