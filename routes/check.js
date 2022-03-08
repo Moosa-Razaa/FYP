@@ -181,12 +181,15 @@ async function PDFReader(path) {
 			object_to_return = SimpleReports(content, object_to_return);
 		}else {
 			object_to_return = MultiLineReports(content, object_to_return);
+			console.log("---------------------------------------------");
+			console.log(object_to_return["Attribute"]);
+			console.log("----------------------------------------------");
 		}
 	});
 	return object_to_return;
 }
 
-function SimpleReports(content, object_to_return) {
+async function SimpleReports(content, object_to_return) {
 	object_to_return["MR Number"] = content[0].split(":")[1];
 	object_to_return["Patient Name"] = content[2].split(":")[1];
 	object_to_return["Gender "] = content[3].split("|")[2].trim();
@@ -194,8 +197,12 @@ function SimpleReports(content, object_to_return) {
 	object_to_return["Ref. Consultant"] = content[4].split(":")[1];
 	object_to_return["Date "] = content[7].split(":")[1];
 	let attributes = [];
-	for (let i = 13; i < content.length - 5; i++) {
+	for (let i = 13; i < content.length - 3; i++) {
 		let currentObj = {};
+		if(content[i].includes("Comment"))
+		{
+			break;
+		}
 		currentObj["Attribute"] = content[i];
 		currentObj["Value"] = content[++i];
 		//const unit = content[++i].match(/^[^0-9.<]+/);
@@ -214,7 +221,7 @@ function SimpleReports(content, object_to_return) {
 	object_to_return["Attributes"] = attributes;
 	return object_to_return;
 }
-function MultiLineReports(content, object_to_return) {
+async function MultiLineReports(content, object_to_return) {
 	let attributes = {};
 	object_to_return["MR Number"] = content[0].split(":")[1];
 	object_to_return["Patient Name"] = content[2].split(":")[1];
@@ -241,7 +248,7 @@ function MultiLineReports(content, object_to_return) {
 	object_to_return["Attribute"] = attributes;
 	return object_to_return;
 }
-function MetaData(content, object_to_return)
+async function MetaData(content, object_to_return)
 {
 	object_to_return["MR Number"] = content[0].split(":")[1];
 	object_to_return["Patient Name"] = content[2].split(":")[1];
@@ -273,7 +280,7 @@ async function DowPDFReader(path)
             tempObj[`Attribute`]= content[14].match(/([A-Za-z]+[ ]?[A-Z]*[ ]?[A-Z]*)/)[0];
             tempObj[`Value`]= content[14].match(/([0-9]*[.]?[0-9]*[ ]*[a-z]*[\/][a-z]*)/g)[0];
             tempObj[`Unit`] = content[14].match(/(Vitamin[ ]D[ ][A-Za-z]*[ ][ ]+[<][0-9]+)/g)[0];
-            console.log(content.length - 18)
+            //console.log(content.length - 18)
             // for(let i = 0; i < content.length - 18; i++)
             // {
             //     tempObj[`Unit`] = content[i+14].match(/(Vitamin[ ]D[ ][A-Za-z]*[ ]+[<]?[0-9]+)/g)[0];
@@ -306,7 +313,7 @@ async function DowPDFReader(path)
             object_to_return["Requesting Physician"] = content[9];
             object_to_return["Lab No"] = content[7];
             object_to_return["Date "] = content[12];
-            console.log(content.length - 20)
+            //console.log(content.length - 20)
             for(let i = 0; i < content.length - 20; i++)
             {
                 let tempObj = {};
@@ -351,15 +358,15 @@ async function DowPDFReader(path)
                 tempObj[`Unit`] = content[i+14].match(/([<][0-9]+)/g)[0];
                 attributes.push(tempObj);
             }
+			
         }
         else
         {
-            console.log("Invalid Report");
+            //console.log("Invalid Report");
         }
         
         object_to_return["Attributes"] = attributes;
     });
-    
     return object_to_return;
 }
 

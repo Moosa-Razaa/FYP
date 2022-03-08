@@ -98,13 +98,14 @@ router.post("/reports", auth, async (req, res) => {
 					current_date[1].trim(); //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
 				const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
 				connection.query(query_filename_check, (error, result) => {
+					//console.log(result);
 					if (error) {
 						return res.status(503).send("Database not responding.");
 					} else if (
 						result[1][0]["@_result"].toString().trim().length === 5
 					) {
 						//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
-						console.log("I am still running......");
+						//console.log("I am still running......");
 						const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 2, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
 						connection.query(query, (error, result) => {
 							if (error) {
@@ -119,45 +120,55 @@ router.post("/reports", auth, async (req, res) => {
 							if (current_obj.hasOwnProperty("Attributes")) {
 								for (const obj of current_obj["Attributes"]) {
 									//report_id, download_id, aatribute_name, attr_value, range, status
-									const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${
-										obj["Attribute"]
-									}", "${
-										obj["Value"].trim() + obj["Unit"]
-									}", "${
-										obj["Range"]
-									}", @_status); SELECT @_status;`;
-									console.log(add_attribute);
-
-									console.log(add_attribute);
+									const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${obj["Attribute"]}", "${obj["Value"].trim() + obj["Unit"]}", "${obj["Range"]}", @_status); SELECT @_status;`;
 									connection.query(
-										add_attribute,
-										(error, result) => {
-											if (error) {
+										add_attribute,(error, result) => {
+											if (error) 
+											{
 												console.log(error);
 												is_error = true;
-												return res
-													.status(503)
-													.send(
-														"Attributes : Database server down."
-													);
-											} else {
-												const attr_result =
-													result[1][0]["@_status"];
+												return res.status(503).send("Attributes : Database server down.");
+											} 
+											else 
+											{
+												const attr_result = result[1][0]["@_status"];
 												if (attr_result !== "success") {
-													console.log(
-														"Attribute not added correctly."
-													);
+													console.log("Attribute not added correctly.");
 													is_error = true;
-													return res
-														.status("503")
-														.send(
-															"Database can't save attributes."
-														);
+													return res.status("503").send("Database can't save attributes.");
 												}
 											}
 										}
 									);
 								}
+							}
+							if(current_obj.hasOwnProperty("Attribute"))
+							{
+								console.log("-------------------------------------");
+								console.log(current_obj);
+								console.log("-------------------------------------");
+								const currentAttribute = current_obj["Attribute"];
+								const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${currentAttribute["Attribute"]}", "${currentAttribute["Value"].trim() + currentAttribute["Unit"]}", "${currentAttribute["Ranges"].join(", ")}", @_status); SELECT @_status;`;
+								console.log(add_attribute);
+								connection.query(
+									add_attribute,(error, result) => {
+										if (error) 
+										{
+											console.log(error);
+											is_error = true;
+											return res.status(503).send("Attributes : Database server down.");
+										} 
+										else 
+										{
+											const attr_result = result[1][0]["@_status"];
+											if (attr_result !== "success") {
+												console.log("Attribute not added correctly.");
+												is_error = true;
+												return res.status("503").send("Database can't save attributes.");
+											}
+										}
+									}
+								);
 							}
 						});
 					}
@@ -175,78 +186,85 @@ router.post("/reports", auth, async (req, res) => {
 			);
 			if (dowReadValues === "false") {
 				return res.status(503).send("Can't read reports.");
-			}
-			for (const current_obj of dowReadValues) {
-				//const current_date = current_obj["Date "].split(",");
-				//const current_month = current_date[0].split(" ");
-				//const current_date = current_obj["Date "].split("/");
-				const date = current_obj["Date "]; //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
-				const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
-				connection.query(query_filename_check, (error, result) => {
-					if (error) {
-						return res.status(503).send("Database not responding.");
-					} else if (
-						result[1][0]["@_result"].toString().trim().length === 5
-					) {
-						//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
-						console.log("I am still running......");
-						const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 1, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
-						connection.query(query, (error, result) => {
-							if (error) {
-								is_error = true;
-								console.log(error);
-								return res
-									.status(503)
-									.send("Database server down.");
-							}
-							const report_id = result[1][0]["@_report_id"];
-							const download_id = result[1][0]["@_download_id"];
-							if (current_obj.hasOwnProperty("Attributes")) {
-								for (const obj of current_obj["Attributes"]) {
-									//report_id, download_id, aatribute_name, attr_value, range, status
-									const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${
-										obj["Attribute"]
-									}", "${
-										obj["Value"].trim() + obj["Unit"]
-									}", "${
-										obj["Range"]
-									}", @_status); SELECT @_status;`;
-									console.log(add_attribute);
+			} else {
+				//console.log(dowReadValues);
+				for (const current_obj of dowReadValues) {
+					//const current_date = current_obj["Date "].split(",");
+					//const current_month = current_date[0].split(" ");
+					//const current_date = current_obj["Date "].split("/");
+					const date = current_obj["Date "]; //current_date[2] + "-" + current_date[1] + "-" + current_date[0];
+					const query_filename_check = `CALL CheckExistingFile(${user_id}, \"${current_obj["File Name"]}\", @_result); SELECT @_result;`;
+					connection.query(query_filename_check, (error, result) => {
+						//console.log(result);
+						if (error) {
+							return res
+								.status(503)
+								.send("Database not responding.");
+						} else if (
+							result[1][0]["@_result"].toString().trim()
+								.length === 5
+						) {
+							//user_id, mrno, report_name, report_date, lab_id, return report_id, download_report_id
+							//console.log("I am still running......");
+							const query = `CALL add_rpt(${user_id}, \"${current_obj["MR Number"]}\", \"${current_obj["Patient Name"]}\", \"${current_obj["Test Name"]}\", \"${date}\", 1, \"${current_obj["File Name"]}\", @_report_id, @_download_id); SELECT @_report_id, @_download_id;`;
+							connection.query(query, (error, result) => {
+								if (error) {
+									is_error = true;
+									console.log(error);
+									return res
+										.status(503)
+										.send("Database server down.");
+								}
+								const report_id = result[1][0]["@_report_id"];
+								const download_id =
+									result[1][0]["@_download_id"];
+								if (current_obj.hasOwnProperty("Attributes")) {
+									for (const obj of current_obj[
+										"Attributes"
+									]) {
+										//report_id, download_id, aatribute_name, attr_value, range, status
+										const add_attribute = `CALL add_attrib(${report_id}, ${download_id}, "${obj["Attribute"]}", "${obj["Value"].trim()}", "${obj["Unit"]}", @_status); SELECT @_status;`;
 
-									console.log(add_attribute);
-									connection.query(
-										add_attribute,
-										(error, result) => {
-											if (error) {
-												console.log(error);
-												is_error = true;
-												return res
-													.status(503)
-													.send(
-														"Attributes : Database server down."
-													);
-											} else {
-												const attr_result =
-													result[1][0]["@_status"];
-												if (attr_result !== "success") {
-													console.log(
-														"Attribute not added correctly."
-													);
+										//console.log(add_attribute);
+										connection.query(
+											add_attribute,
+											(error, result) => {
+												if (error) {
+													console.log(error);
 													is_error = true;
 													return res
-														.status("503")
+														.status(503)
 														.send(
-															"Database can't save attributes."
+															"Attributes : Database server down."
 														);
+												} else {
+													const attr_result =
+														result[1][0][
+															"@_status"
+														];
+													if (
+														attr_result !==
+														"success"
+													) {
+														console.log(
+															"Attribute not added correctly."
+														);
+														is_error = true;
+														return res
+															.status("503")
+															.send(
+																"Database can't save attributes."
+															);
+													}
 												}
 											}
-										}
-									);
+										);
+									}
 								}
-							}
-						});
-					}
-				});
+							});
+						}
+					});
+				}
 			}
 		}
 	}
@@ -325,18 +343,47 @@ router.post("/get/report", auth, (req, res) => {
 
 router.post("/get/report/view", auth, (req, res) => {
 	const reportId = req.body.download_report_id;
+	console.log(`Id : ${reportId}`);
 	const query = `SELECT * FROM reportdetail WHERE rpt_down_id = ${reportId};`;
+	const userData = `SELECT * FROM allreport WHERE rpt_down_id = ${reportId};`;
 
-	connection.query(query, (error, rows, fields) => {
-		if(error)
-		{
-			return res.status(503).send("Can't get report details from database.");
+	connection.query(query, (error, rows) => {
+		if (error) {
+			return res
+				.status(503)
+				.send("Can't get report details from database.");
+		} else {		
+			let objToReturn = {};
+			objToReturn["Attributes"] = [];
+			for (const currentObj of rows) {
+				objToReturn["Attributes"].push({
+					Attribute: currentObj["attri_nm"],
+					Value: currentObj["value"],
+					Range: currentObj["range"],
+				});
+			}
+			connection.query(userData, (error2, rows2) => {
+				if(error2)
+				{
+					return res.status(503).send("Can't get metadata of reports from database.");
+				}
+				console.log(rows2);
+				objToReturn["Test Name"] = rows2[0]["rpt_nm"];
+				objToReturn["Sample Date"] = rows2[0]["Sample_date"];
+				objToReturn["Lab Name"] = rows2[0]["lab_nm"];
+				objToReturn["Patient Name"] = rows2[0]["patientname"];
+				objToReturn["MR Number"] = rows2[0]["mr_num"];
+
+				console.log(objToReturn);
+				return res.status(200).send(objToReturn);
+			});			
 		}
-		console.log(rows);
-		console.log("--------------------");
-		console.log(fields);
-		return res.status(200).send("Wait for testing...");
 	});
+});
+
+router.post("/compare/report", auth, (req, res) => {
+	const reportName = req.body.report_name;
+	const userId = req.body.user.userId;
 });
 
 //Function to download reports.
@@ -380,7 +427,6 @@ function handleDisconnect() {
 		} // to avoid a hot loop, and to allow our node script to
 	}); // process asynchronous requests in the meantime.                                        // If you're also serving http, display a 503 error.
 	connection.on("error", function (err) {
-		console.log("Trying to reconnect...");
 		if (err.code === "PROTOCOL_CONNECTION_LOST") {
 			// Connection to the MySQL server is usually
 			handleDisconnect(); // lost due to either server restart, or a
